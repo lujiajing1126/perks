@@ -25,7 +25,7 @@ func TestHistogram(t *testing.T) {
 	}
 
 	if g := count(h.Bins()); g != numPoints {
-		t.Fatalf("binned %d points, wanted %d", g, numPoints)
+		t.Fatalf("binned %d points, wanted %f", g, numPoints)
 	}
 }
 
