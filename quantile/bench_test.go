@@ -1,6 +1,7 @@
 package quantile
 
 import (
+	"math/rand"
 	"testing"
 )
 
@@ -23,10 +24,15 @@ func BenchmarkInsertTargeted(b *testing.B) {
 }
 
 func BenchmarkInsertTargetedSmallEpsilon(b *testing.B) {
+	b.ReportAllocs()
 	s := NewTargeted(TargetsSmallEpsilon)
+	nums := make([]float64, 0, b.N)
+	for i := 0; i < b.N; i++ {
+		nums = append(nums, rand.Float64()*10)
+	}
 	b.ResetTimer()
-	for i := float64(0); i < float64(b.N); i++ {
-		s.Insert(i)
+	for i := 0; i < b.N; i++ {
+		s.Insert(nums[i])
 	}
 }
 
