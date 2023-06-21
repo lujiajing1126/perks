@@ -4,6 +4,14 @@ import (
 	"testing"
 )
 
+var TargetsZeroEpsilon = map[float64]float64{
+	0.01: 0.0,
+	0.10: 0.0,
+	0.50: 0.0,
+	0.90: 0.0,
+	0.99: 0.0,
+}
+
 func BenchmarkInsertTargeted(b *testing.B) {
 	b.ReportAllocs()
 
@@ -16,6 +24,14 @@ func BenchmarkInsertTargeted(b *testing.B) {
 
 func BenchmarkInsertTargetedSmallEpsilon(b *testing.B) {
 	s := NewTargeted(TargetsSmallEpsilon)
+	b.ResetTimer()
+	for i := float64(0); i < float64(b.N); i++ {
+		s.Insert(i)
+	}
+}
+
+func BenchmarkInsertTargetedZeroEpsilon(b *testing.B) {
+	s := NewTargeted(TargetsZeroEpsilon)
 	b.ResetTimer()
 	for i := float64(0); i < float64(b.N); i++ {
 		s.Insert(i)

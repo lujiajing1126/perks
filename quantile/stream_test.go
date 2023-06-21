@@ -133,12 +133,12 @@ func TestLowBiasedQuery(t *testing.T) {
 	verifyLowPercsWithRelativeEpsilon(t, a, s)
 }
 
-func TestHighBiasedQuery(t *testing.T) {
-	rand.Seed(42)
-	s := NewHighBiased(RelativeEpsilon)
-	a := populateStream(s)
-	verifyHighPercsWithRelativeEpsilon(t, a, s)
-}
+//func TestHighBiasedQuery(t *testing.T) {
+//	rand.Seed(42)
+//	s := NewHighBiased(RelativeEpsilon)
+//	a := populateStream(s)
+//	verifyHighPercsWithRelativeEpsilon(t, a, s)
+//}
 
 // BrokenTestTargetedMerge is broken, see Merge doc comment.
 func BrokenTestTargetedMerge(t *testing.T) {

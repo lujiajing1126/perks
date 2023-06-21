@@ -9,12 +9,13 @@
 //
 // For more detailed information about the algorithm used, see:
 //
-// Effective Computation of Biased Quantiles over Data Streams
+// # Effective Computation of Biased Quantiles over Data Streams
 //
 // http://www.cs.rutgers.edu/~muthu/bquant.pdf
 package quantile
 
 import (
+	"container/list"
 	"math"
 	"sort"
 )
@@ -129,7 +130,7 @@ type Stream struct {
 }
 
 func newStream(ƒ invariant) *Stream {
-	x := &stream{ƒ: ƒ}
+	x := &stream{ƒ: ƒ, l: list.New()}
 	return &Stream{x, make(Samples, 0, 500), true}
 }
 
@@ -213,17 +214,17 @@ func (s *Stream) maybeSort() {
 }
 
 func (s *Stream) flushed() bool {
-	return len(s.stream.l) > 0
+	return s.stream.l.Len() > 0
 }
 
 type stream struct {
 	n float64
-	l []Sample
+	l *list.List
 	ƒ invariant
 }
 
 func (s *stream) reset() {
-	s.l = s.l[:0]
+	s.l = s.l.Init()
 	s.n = 0
 }
 
@@ -237,27 +238,19 @@ func (s *stream) merge(samples Samples) {
 	// all. Unittests show that the merging is inaccurate. Find out how to
 	// do merges properly.
 	var r float64
-	i := 0
+	var e = s.l.Front()
 	for _, sample := range samples {
-		for ; i < len(s.l); i++ {
-			c := s.l[i]
+		for ; e != nil; e = e.Next() {
+			c := e.Value.(Sample)
 			if c.Value > sample.Value {
 				// Insert at position i.
-				s.l = append(s.l, Sample{})
-				copy(s.l[i+1:], s.l[i:])
-				s.l[i] = Sample{
-					sample.Value,
-					sample.Width,
-					math.Max(sample.Delta, math.Floor(s.ƒ(s, r))-1),
-					// TODO(beorn7): How to calculate delta correctly?
-				}
-				i++
+				sample.Delta = math.Max(sample.Delta, math.Floor(s.ƒ(s, r))-1)
+				e = s.l.InsertBefore(sample, e)
 				goto inserted
 			}
 			r += c.Width
 		}
-		s.l = append(s.l, Sample{sample.Value, sample.Width, 0})
-		i++
+		e = s.l.PushBack(Sample{sample.Value, sample.Width, 0})
 	inserted:
 		s.n += sample.Width
 		r += sample.Width
@@ -272,45 +265,49 @@ func (s *stream) count() int {
 func (s *stream) query(q float64) float64 {
 	t := math.Ceil(q * s.n)
 	t += math.Ceil(s.ƒ(s, t) / 2)
-	p := s.l[0]
+	p := s.l.Front()
 	var r float64
-	for _, c := range s.l[1:] {
-		r += p.Width
-		if r+c.Width+c.Delta > t {
-			return p.Value
+	for e := p.Next(); e != nil; e = e.Next() {
+		r += p.Value.(Sample).Width
+		if r+e.Value.(Sample).Width+e.Value.(Sample).Delta > t {
+			return p.Value.(Sample).Value
 		}
-		p = c
+		p = e
 	}
-	return p.Value
+	return p.Value.(Sample).Value
 }
 
 func (s *stream) compress() {
-	if len(s.l) < 2 {
+	if s.l.Len() < 2 {
 		return
 	}
-	x := s.l[len(s.l)-1]
-	xi := len(s.l) - 1
-	r := s.n - 1 - x.Width
+	x := s.l.Back()
+	r := s.n - 1 - x.Value.(Sample).Width
 
-	for i := len(s.l) - 2; i >= 0; i-- {
-		c := s.l[i]
-		if c.Width+x.Width+x.Delta <= s.ƒ(s, r) {
-			x.Width += c.Width
-			s.l[xi] = x
+	for e := x.Prev(); e != nil; {
+		c := e.Value.(Sample)
+		if c.Width+x.Value.(Sample).Width+x.Value.(Sample).Delta <= s.ƒ(s, r) { // merge
+			x.Value = Sample{
+				Value: x.Value.(Sample).Value,
+				Width: x.Value.(Sample).Width + c.Width,
+				Delta: x.Value.(Sample).Delta,
+			}
 			// Remove element at i.
-			copy(s.l[i:], s.l[i+1:])
-			s.l = s.l[:len(s.l)-1]
-			xi -= 1
+			prev := e.Prev()
+			s.l.Remove(e)
+			e = prev
 		} else {
-			x = c
-			xi = i
+			x = e
+			e = e.Prev()
 		}
 		r -= c.Width
 	}
 }
 
 func (s *stream) samples() Samples {
-	samples := make(Samples, len(s.l))
-	copy(samples, s.l)
+	samples := make(Samples, 0, s.l.Len())
+	for e := s.l.Front(); e != nil; e = e.Next() {
+		samples = append(samples, e.Value.(Sample))
+	}
 	return samples
 }
