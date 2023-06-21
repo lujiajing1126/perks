@@ -30,14 +30,6 @@ func BenchmarkInsertTargetedSmallEpsilon(b *testing.B) {
 	}
 }
 
-func BenchmarkInsertTargetedZeroEpsilon(b *testing.B) {
-	s := NewTargeted(TargetsZeroEpsilon)
-	b.ResetTimer()
-	for i := float64(0); i < float64(b.N); i++ {
-		s.Insert(i)
-	}
-}
-
 func BenchmarkInsertBiased(b *testing.B) {
 	s := NewLowBiased(0.01)
 	b.ResetTimer()

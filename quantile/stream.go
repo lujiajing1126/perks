@@ -245,7 +245,7 @@ func (s *stream) merge(samples Samples) {
 			if c.Value > sample.Value {
 				// Insert at position i.
 				sample.Delta = math.Max(sample.Delta, math.Floor(s.ƒ(s, r))-1)
-				e = s.l.InsertBefore(sample, e)
+				s.l.InsertBefore(sample, e)
 				goto inserted
 			}
 			r += c.Width
